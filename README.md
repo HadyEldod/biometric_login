@@ -25,7 +25,7 @@ any backend, API, or state-management choice.
 
 ```yaml
 dependencies:
-  biometric_login: ^0.1.0
+  biometric_login: ^1.0.0
 ```
 
 ```dart

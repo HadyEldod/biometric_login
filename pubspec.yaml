@@ -1,0 +1,25 @@
+name: biometric_login
+description: >-
+  Backend-agnostic biometric (Face ID / Touch ID / fingerprint) gate with secure
+  secret storage and a ready-made login button for Flutter.
+version: 0.1.0
+homepage: https://github.com/HadyEldod/biometric_login
+repository: https://github.com/HadyEldod/biometric_login
+issue_tracker: https://github.com/HadyEldod/biometric_login/issues
+
+environment:
+  sdk: '>=2.17.0 <4.0.0'
+  flutter: '>=3.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  local_auth: '>=2.1.0 <3.0.0'
+  flutter_secure_storage: '>=9.0.0 <10.0.0'
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:

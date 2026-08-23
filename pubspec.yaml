@@ -1,4 +1,4 @@
-name: biometric_login
+name: biometric_auth_login
 description: >-
   Backend-agnostic biometric (Face ID / Touch ID / fingerprint) gate with secure
   secret storage and a ready-made login button for Flutter.

@@ -1,4 +1,4 @@
-import 'package:biometric_login/biometric_login.dart';
+import 'package:biometric_auth_login/biometric_auth_login.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

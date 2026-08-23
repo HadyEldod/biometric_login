@@ -4,7 +4,7 @@
 /// Import only this file:
 ///
 /// ```dart
-/// import 'package:biometric_login/biometric_login.dart';
+/// import 'package:biometric_auth_login/biometric_auth_login.dart';
 /// ```
 ///
 /// The package protects a single **opaque secret** behind the device's
@@ -13,7 +13,7 @@
 /// independent of any backend.
 ///
 /// See [BiometricLogin] for the core API and [BiometricLoginButton] for the UI.
-library biometric_login;
+library biometric_auth_login;
 
 export 'src/biometric_button.dart' show BiometricLoginButton, BiometricButtonStyle;
 export 'src/biometric_config.dart' show BiometricConfig;

@@ -1,4 +1,4 @@
-# biometric_login
+# biometric_auth_login
 
 Backend-agnostic biometric (Face ID / Touch ID / fingerprint) gate with secure
 secret storage and a ready-made login button for Flutter.
@@ -25,11 +25,11 @@ any backend, API, or state-management choice.
 
 ```yaml
 dependencies:
-  biometric_login: ^1.0.0
+  biometric_auth_login: ^1.0.0
 ```
 
 ```dart
-import 'package:biometric_login/biometric_login.dart';
+import 'package:biometric_auth_login/biometric_auth_login.dart';
 ```
 
 ## Platform setup

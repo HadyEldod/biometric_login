@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:biometric_login/biometric_login.dart';
+import 'package:biometric_auth_login/biometric_auth_login.dart';
 import 'package:flutter/material.dart';
 
 void main() => runApp(const DemoApp());

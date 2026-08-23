@@ -10,7 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  biometric_login:
+  biometric_auth_login:
     path: ../
   cupertino_icons: ^1.0.6
 

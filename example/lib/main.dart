@@ -94,8 +94,23 @@ class _HomePageState extends State<HomePage> {
     _print('Unlocked. Logged in as: ${data['username']}');
   }
 
+  // Turn a failure status into an actionable message using the extension
+  // helpers, instead of hard-coding every enum value.
   void _onError(BiometricStatus status) {
-    _print('Biometric failed: ${status.name}');
+    String message;
+    if (status.requiresEnrollmentInApp) {
+      message = 'Biometric login is not set up yet — enable it first.';
+    } else if (status.requiresDeviceSetup) {
+      message = 'No biometrics enrolled. Enable them in device Settings.';
+    } else if (status.shouldFallBack) {
+      message =
+          'Biometrics can\'t be used now — falling back to password login.';
+    } else if (status.canRetry) {
+      message = 'Could not verify (${status.name}). Tap to try again.';
+    } else {
+      message = 'Biometric failed: ${status.name}';
+    }
+    _print(message);
   }
 
   // 6. Delete / disable.

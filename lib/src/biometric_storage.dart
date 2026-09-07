@@ -10,6 +10,9 @@ import 'biometric_config.dart';
 /// `flutter_secure_storage` (Android Keystore / iOS Keychain) and is what you
 /// get if you don't provide one.
 abstract class BiometricSecretStorage {
+  /// Const constructor so implementations can be `const`.
+  const BiometricSecretStorage();
+
   /// Reads the value for [key], or `null` if absent.
   Future<String?> read(String key);
 
@@ -23,11 +26,17 @@ abstract class BiometricSecretStorage {
 /// Default [BiometricSecretStorage] backed by `flutter_secure_storage`.
 ///
 /// Secrets are stored using platform-encrypted storage only:
-/// - Android: Keystore-backed `EncryptedSharedPreferences`.
-/// - iOS: Keychain, bound to this device/installation.
+/// - Android: Keystore-backed cipher storage (`flutter_secure_storage` 11+; the
+///   old `EncryptedSharedPreferences` backend was removed upstream and any
+///   legacy data is auto-migrated).
+/// - iOS / macOS: Keychain, bound to this device/installation.
+/// - Windows: DPAPI-protected storage.
 ///
 /// Plain `SharedPreferences`, files, or other insecure stores are never used.
 class SecureBiometricStorage implements BiometricSecretStorage {
+  /// Creates secure storage using the Android/iOS options from [config]. Pass
+  /// [storage] to inject a fake `FlutterSecureStorage` in tests; otherwise the
+  /// platform default is used.
   SecureBiometricStorage({
     BiometricConfig config = const BiometricConfig(),
     FlutterSecureStorage? storage,

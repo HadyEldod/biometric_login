@@ -9,6 +9,8 @@ import 'biometric_types.dart';
 /// theme-aware default derived from the ambient [Theme]. Use [copyWith] to tweak
 /// a shared base style.
 class BiometricButtonStyle {
+  /// Creates a button style. Every field is optional; anything omitted resolves
+  /// to a theme-aware default when the button is built.
   const BiometricButtonStyle({
     this.backgroundColor,
     this.foregroundColor,
@@ -109,6 +111,12 @@ class BiometricButtonStyle {
 ///
 /// Either way the button contains NO login/backend logic.
 class BiometricLoginButton extends StatefulWidget {
+  /// Creates a biometric login button.
+  ///
+  /// For **gate mode**, pass [biometric] together with [onUnlocked] (and
+  /// optionally [onError]). For **manual mode**, pass [onPressed] — it takes
+  /// precedence over [biometric]. All other fields are optional and control the
+  /// icon/label, styling, enabled state, and accessibility.
   const BiometricLoginButton({
     super.key,
     this.biometric,
@@ -189,9 +197,8 @@ class _BiometricLoginButtonState extends State<BiometricLoginButton> {
     try {
       final kind = await widget.biometric!.getBiometricKind();
       if (!mounted) return;
-      setState(() => _kind = kind == BiometricKind.none
-          ? BiometricKind.generic
-          : kind);
+      setState(() =>
+          _kind = kind == BiometricKind.none ? BiometricKind.generic : kind);
     } catch (_) {
       // Keep the generic fallback.
     }
@@ -256,9 +263,10 @@ class _BiometricLoginButtonState extends State<BiometricLoginButton> {
     final radius = BorderRadius.circular(style.borderRadius);
 
     final label = widget.label ?? _defaultLabel();
-    final TextStyle textStyle = (theme.textTheme.labelLarge ?? const TextStyle())
-        .copyWith(color: foreground, fontWeight: FontWeight.w600)
-        .merge(style.textStyle);
+    final TextStyle textStyle =
+        (theme.textTheme.labelLarge ?? const TextStyle())
+            .copyWith(color: foreground, fontWeight: FontWeight.w600)
+            .merge(style.textStyle);
 
     final Widget content = _busy
         ? (widget.loadingIndicator ??

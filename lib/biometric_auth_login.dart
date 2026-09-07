@@ -15,11 +15,16 @@
 /// See [BiometricLogin] for the core API and [BiometricLoginButton] for the UI.
 library biometric_auth_login;
 
-export 'src/biometric_button.dart' show BiometricLoginButton, BiometricButtonStyle;
+export 'src/biometric_button.dart'
+    show BiometricLoginButton, BiometricButtonStyle;
 export 'src/biometric_config.dart' show BiometricConfig;
 export 'src/biometric_login_base.dart' show BiometricLogin;
 export 'src/biometric_service.dart' show BiometricService;
 export 'src/biometric_storage.dart'
     show BiometricSecretStorage, SecureBiometricStorage;
 export 'src/biometric_types.dart'
-    show BiometricKind, BiometricStatus, BiometricUnlockResult;
+    show
+        BiometricKind,
+        BiometricStatus,
+        BiometricStatusX,
+        BiometricUnlockResult;

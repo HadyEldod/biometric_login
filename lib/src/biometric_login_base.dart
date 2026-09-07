@@ -27,6 +27,12 @@ import 'biometric_types.dart';
 /// }
 /// ```
 class BiometricLogin {
+  /// Creates a biometric login gate.
+  ///
+  /// [config] tunes storage keys, prompt reasons, and platform storage options.
+  /// [service] and [storage] are injection seams for testing; when omitted, a
+  /// real [BiometricService] and a [SecureBiometricStorage] derived from [config]
+  /// are used.
   BiometricLogin({
     this.config = const BiometricConfig(),
     BiometricService? service,
@@ -40,6 +46,11 @@ class BiometricLogin {
   final BiometricService _service;
   final BiometricSecretStorage _storage;
 
+  /// Guards against overlapping prompt-bearing operations ([saveSecret] /
+  /// [unlock]) on the same instance, so two system prompts can never be shown at
+  /// once.
+  bool _busy = false;
+
   // ---------------------------------------------------------------------------
   // Capability
   // ---------------------------------------------------------------------------
@@ -51,21 +62,37 @@ class BiometricLogin {
   /// biometric, i.e. biometric authentication can actually run right now.
   Future<bool> isAvailable() => _service.isAvailable();
 
+  /// Whether a biometric prompt can run on this device right now (hardware
+  /// present and at least one biometric enrolled). Alias of [isAvailable] with
+  /// an intention-revealing name; it does NOT check whether a secret has been
+  /// saved — use [isEnabled] for that.
+  Future<bool> canAuthenticate() => _service.isAvailable();
+
   /// The most representative biometric affordance for the current device, for
   /// picking an icon/label in the UI.
   Future<BiometricKind> getBiometricKind() => _service.getBiometricKind();
+
+  /// All biometric affordances the app can currently use (e.g. both face and
+  /// fingerprint). Empty when none are available. Useful when you want to show
+  /// every option rather than a single representative one.
+  Future<List<BiometricKind>> getAvailableBiometrics() =>
+      _service.getAvailableBiometrics();
 
   // ---------------------------------------------------------------------------
   // Enrollment state
   // ---------------------------------------------------------------------------
 
-  /// Whether a secret has been saved for this app (biometric login is set up).
+  /// Whether biometric login has been set up for this app, i.e. [saveSecret]
+  /// completed successfully.
+  ///
+  /// This checks only the lightweight "enabled" flag; it does NOT read (or
+  /// require decrypting) the secret itself, so it is cheap and never triggers a
+  /// prompt. The secret is read — and any decrypt/storage failure distinguished
+  /// from "not enabled" — only inside [unlock].
   Future<bool> isEnabled() async {
     try {
       final enabled = await _storage.read(config.enabledKey);
-      if (enabled != 'true') return false;
-      final secret = await _storage.read(config.secretKey);
-      return secret != null && secret.isNotEmpty;
+      return enabled == 'true';
     } catch (_) {
       return false;
     }
@@ -83,8 +110,14 @@ class BiometricLogin {
   /// storage fails.
   ///
   /// Pass [reason] to override the prompt text for this call.
+  ///
+  /// If another [saveSecret]/[unlock] is already in progress on this instance,
+  /// this call is rejected (returns `false`) rather than showing a second
+  /// prompt.
   Future<bool> saveSecret(String secret, {String? reason}) async {
     if (secret.isEmpty) return false;
+    if (_busy) return false;
+    _busy = true;
     try {
       final status = await _service.authenticate(
         reason: reason ?? config.enableReason,
@@ -99,6 +132,8 @@ class BiometricLogin {
       return true;
     } catch (_) {
       return false;
+    } finally {
+      _busy = false;
     }
   }
 
@@ -110,50 +145,70 @@ class BiometricLogin {
   /// [BiometricUnlockResult.secret] holds the opaque secret.
   ///
   /// Pass [reason] to override the prompt text for this call.
+  ///
+  /// If another [saveSecret]/[unlock] is already in progress on this instance,
+  /// this call is rejected with [BiometricStatus.busy] rather than showing a
+  /// second prompt.
   Future<BiometricUnlockResult> unlock({String? reason}) async {
-    // Availability.
-    if (!await _service.hasHardware()) {
-      return const BiometricUnlockResult.failure(BiometricStatus.unavailable);
+    if (_busy) {
+      return const BiometricUnlockResult.failure(BiometricStatus.busy);
     }
-    if (!await _service.isAvailable()) {
-      return const BiometricUnlockResult.failure(BiometricStatus.notEnrolled);
-    }
-
-    // Must have a saved secret.
-    if (!await isEnabled()) {
-      return const BiometricUnlockResult.failure(BiometricStatus.notEnabled);
-    }
-
-    // Biometric gate.
-    final status = await _service.authenticate(
-      reason: reason ?? config.signInReason,
-      biometricOnly: config.biometricOnly,
-      stickyAuth: config.stickyAuth,
-      useErrorDialogs: config.useErrorDialogs,
-    );
-    if (status != BiometricStatus.success) {
-      return BiometricUnlockResult.failure(status);
-    }
-
-    // Read the protected secret.
-    String? secret;
+    _busy = true;
     try {
-      secret = await _storage.read(config.secretKey);
-    } catch (_) {
-      return const BiometricUnlockResult.failure(BiometricStatus.storageError);
-    }
-    if (secret == null || secret.isEmpty) {
-      // Enabled flag without a secret: clean up and report "not enabled".
-      await deleteSecret();
-      return const BiometricUnlockResult.failure(BiometricStatus.notEnabled);
-    }
+      // Availability.
+      if (!await _service.hasHardware()) {
+        return const BiometricUnlockResult.failure(BiometricStatus.unavailable);
+      }
+      if (!await _service.isAvailable()) {
+        return const BiometricUnlockResult.failure(BiometricStatus.notEnrolled);
+      }
 
-    return BiometricUnlockResult.success(secret);
+      // Must have a saved secret.
+      if (!await isEnabled()) {
+        return const BiometricUnlockResult.failure(BiometricStatus.notEnabled);
+      }
+
+      // Biometric gate.
+      final status = await _service.authenticate(
+        reason: reason ?? config.signInReason,
+        biometricOnly: config.biometricOnly,
+        stickyAuth: config.stickyAuth,
+        useErrorDialogs: config.useErrorDialogs,
+      );
+      if (status != BiometricStatus.success) {
+        return BiometricUnlockResult.failure(status);
+      }
+
+      // Read the protected secret.
+      String? secret;
+      try {
+        secret = await _storage.read(config.secretKey);
+      } catch (_) {
+        return const BiometricUnlockResult.failure(
+            BiometricStatus.storageError);
+      }
+      if (secret == null || secret.isEmpty) {
+        // Enabled flag without a secret: clean up and report "not enabled".
+        await _clear();
+        return const BiometricUnlockResult.failure(BiometricStatus.notEnabled);
+      }
+
+      return BiometricUnlockResult.success(secret);
+    } finally {
+      _busy = false;
+    }
   }
 
   /// Removes the stored secret and disables biometric login. Best-effort: never
   /// throws (safe to call on logout).
-  Future<void> deleteSecret() async {
+  ///
+  /// Does not require a biometric prompt and is intentionally not blocked by an
+  /// in-flight [unlock]/[saveSecret]: a logout should always win. If it races an
+  /// [unlock] that is mid-read, that unlock simply resolves to
+  /// [BiometricStatus.notEnabled], which is the correct post-logout outcome.
+  Future<void> deleteSecret() => _clear();
+
+  Future<void> _clear() async {
     try {
       await _storage.delete(config.secretKey);
       await _storage.delete(config.enabledKey);
